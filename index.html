@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title></title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.min.css" integrity="sha256-aa0xaJgmK/X74WM224KMQeNQC2xYKwlAt08oZqjeF0E=" crossorigin="anonymous" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.min.js" integrity="sha256-R4pqcOYV8lt7snxMQO/HSbVCFRPMdrhAFMH+vr9giYI=" crossorigin="anonymous"></script>
+  <style>
+    body {
+      width: 100vw;
+      height: 100vh;
+    }
+    .container {
+      margin: auto;
+      vertical-align: center;
+    }
+
+    .chart-container {
+      position: relative;
+      width: 80vw;
+      height: 60vh;
+      margin: 0 10%;
+    }
+
+    .sliders-area {
+      margin-top: 50px;
+    }
+
+    .fit-center-area {
+      width: 80vw;
+      display: flex;
+      justify-content: center;
+      margin: 0 auto;
+    }
+
+    .w-50 {
+      display: flex;
+      width: 45%;
+    }
+
+    .left-section {
+      justify-content: flex-end;
+      margin-right: 5%;
+    }
+
+    .right-section {
+      justify-content: flex-end;
+      margin-left: 5%;
+    }
+
+    .slider {
+      width: 35%;
+    }
+
+    .slider-value {
+      width: 10%;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="chart-container">
+      <canvas id="interestChart"></canvas>
+    </div>
+    <div class="sliders-area">
+      <div class="fit-center-area">
+        <div class="w-50 left-section">
+          Year:
+          <input type="range" min="1" max="100" value="50" class="slider" id="year" onchange="handleChange(true)">
+          <span id="year-span" class="slider-value">50</span>
+        </div>
+        <div class="w-50 right-section">
+          Interest:
+          <input type="range" min="0.01" max="25" value="12.5" step="0.25" class="slider" id="interest" onchange="handleChange(true)">
+          <span id="interest-span" class="slider-value">12.5</span>
+        </div>
+      </div>
+      <div class="fit-center-area">
+        <div class="w-50 left-section">
+          Starting Amount:
+          <input type="range" min="0" max="1000000" value="500000" step="10000" class="slider" id="startingAmount" onchange="handleChange(true)">
+          <span id="startingAmount-span" class="slider-value">500000</span>
+        </div>
+        <div class="w-50 right-section">
+          Monthly Savings:
+          <input type="range" min="0" max="25000" value="12500" step="250" class="slider" id="monthlySavings" onchange="handleChange(true)">
+          <span id="monthlySavings-span" class="slider-value">12500</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    const STEPS = 10;
+    let myChart;
+    const ctx = document.getElementById('interestChart');
+    const getDrawData = (year, interest, startingAmount, monthlySavings) => {
+      const step = parseInt(year / 10);
+      const labels = [...Array(year + 1).keys()].reduce((res, cur) => {
+        if (step < 1 || (step !== 0 && cur % step === 0) || cur === year) {
+          res.push(cur);
+        }
+        return res;
+      }, []);
+
+      let minV = Number.MAX_VALUE;
+      let maxV = Number.MIN_VALUE;
+      const data = labels.map((val) => {
+        const middleValue = Math.pow((1 + interest * 0.01), val);
+        const yValue = startingAmount * middleValue + monthlySavings * 12 * (middleValue - 1) * 1 / (interest * 0.01);
+        minV = Math.min(minV, yValue);
+        maxV = Math.max(maxV, yValue);
+        return yValue;
+      });
+
+      console.log('labels and values = ', labels, data);
+
+      const stepValue = (maxV - minV) / STEPS;
+      return {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{ 
+              data,
+              label: "line-color",
+              borderColor: "#3e95cd",
+              fill: false
+            },
+          ]
+        },
+        options: {
+          maintainAspectRatio: false,
+          title: {
+            display: true,
+            text: 'Interest Line-Graph'
+          },
+          scales: {
+            yAxes: [{
+              display: true,
+              ticks: {
+                  min: minV,
+                  steps: STEPS,
+                  stepValue,
+                  max: maxV
+              }
+            }]
+          }
+        },
+      };
+    };
+
+    const handleChange = (isUpdating) => {
+      const year = parseInt(document.getElementById('year').value);
+      document.getElementById('year-span').innerHTML = year;
+      const interest = parseFloat(document.getElementById('interest').value);
+      document.getElementById('interest-span').innerHTML = interest;
+      const startingAmount = parseInt(document.getElementById('startingAmount').value);
+      document.getElementById('startingAmount-span').innerHTML = startingAmount;
+      const monthlySavings = parseInt(document.getElementById('monthlySavings').value);
+      document.getElementById('monthlySavings-span').innerHTML = monthlySavings;
+      console.log(year, interest, startingAmount, monthlySavings);
+      const { type, data, options } = getDrawData(year, interest, startingAmount, monthlySavings);
+
+      if (isUpdating) {
+        myChart.type = type;
+        myChart.data = data;
+        myChart.options = options;
+        myChart.update();
+      } else {
+        myChart = new Chart(ctx, { type, data, options });
+      }
+    }
+    handleChange(false);
+  </script>
+</body>
+</html>
